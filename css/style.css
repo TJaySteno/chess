@@ -1,0 +1,52 @@
+body {
+  background: darkgray;
+}
+
+.board {
+  border: 25px solid grey;
+
+  height: 600px;
+  width: 600px;
+
+  margin: 20px auto;
+  padding: 0; }
+
+.square {
+  height: 75px;
+  width: 75px;
+  margin-bottom: -4px;
+  box-sizing: border-box;
+  display: inline-block; }
+
+  .square.light {
+    background: darkkhaki; }
+
+  .square.dark {
+    background: darkolivegreen; }
+
+  .square:focus {
+    outline: none; }
+
+  .square.active {
+    outline: none;
+    background: rgba(0, 191, 255, 0.2) !important; }
+
+  .square.moves {
+    outline: none;
+    background: rgba(0, 191, 255, 0.2) !important; }
+
+  .square.moves.light {
+    border: 22px darkkhaki solid; }
+
+  .square.moves.dark {
+    border: 22px darkolivegreen solid; }
+
+.piece {
+  height: 75px;
+  width: 75px;
+  margin-bottom: -4px;
+
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none; }
