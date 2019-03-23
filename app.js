@@ -1,187 +1,163 @@
-// showMoves
+// this.turn
+  // add .checkMove() to validate moves
+    // this might allow for alg notation for moves
+// this.board[1]
+  // if k|K moves, remove kq|KQ
+  // if r|R moves, ...
+// this.board[2]
+  // ?
+// this.board[3] (HM clock)
+  // before .movePiece()
+  // if old sq has 'p' OR new sq has piece, then 0
+  // else + 1
+// this.board[4] (turn clock)
+  // after .movePiece()
+  // if this.board[0] === 'w', then it's 'b' now
+  // else it's 'w' now, and +1 this.board[4]
 
+const readline = require('readline');
 
-function chess () {
-
-  /*
-    CREATE AND POPULATE BOARD
-  */
-
-  function createPiece (i, j) {
-    const piece = document.createElement('img');
-
-    // Determine piece type and side
-    let type, side;
-    if (i === 2 || i === 7) type = 'p';
-    else type = 'rnbqkbnr'[j-97];
-
-    if (i <= 2) side = 'l';
-    else side = 'd';
-
-    piece.src = `./img/${type}${side}.png`;
-    piece.className = `piece ${type} ${side}`;
-
-    return piece;
-  }
-
-  function square (i, j) {
-    const white = (i + j) % 2;
-    const notation = String.fromCharCode(j) + i;
-
-    const square = document.createElement('div');
-    square.id = notation;
-
-    if (white) square.className = 'square light';
-    else square.className = 'square dark';
-
-    if (i <= 2 || i >= 7) square.appendChild(createPiece(i, j));
-
-    return square;
-  }
-
-  function createBoard () {
-    const board = document.createElement('div');
-    board.className = 'board';
-
-    // Create rows
-    for (let i = 8; i > 0; i--) {
-      // Create squares in rows
-      for (let j = 97; j < 105; j++) {
-        board.appendChild(square(i, j));
-      }
-    }
-
-    return board;
-  }
-
-  document.body.appendChild(createBoard());
+function Game () {
 
   /*
-    INITIATE GAME
+    GAME STATE
   */
 
-  const game = {
-    turn: 0,
-    piece: {
-      active: false,
-      type: '',
-      square: {},
-      moves: []
-    }
+  this.player = 'white';
+  this.inPlay = true;
+
+  this.board = [
+    ['w','KQkq','-','0','1'],
+    // turn castles en-pesante halfmove-clock fullmove-number
+      // HM clock: # of halfmoves since last capture or pawn advance
+      // FM number: turn number (advance after black move)
+    ['r','n','b','q','k','b','n','r'],
+    ['p','p','p','p','p','p','p','p'],
+    ['-','-','-','-','-','-','-','-'],
+    ['-','-','-','-','-','-','-','-'],
+    ['-','-','-','-','-','-','-','-'],
+    ['-','-','-','-','-','-','-','-'],
+    ['P','P','P','P','P','P','P','P'],
+    ['R','N','B','Q','K','B','N','R']
+    // key: this.board[num][String.fromCharCode(x+97)]
+      // t -> b: 1-8
+      // l -> r; a-h
+  ];
+
+  this.begin = () => {
+    this.printBoard();
+    this.turn();
   }
 
   /*
-    PIECE LOGIC
+    ^ game state ^
+      -----
+    UTILITY FUNCTIONS
   */
 
-  // Reset board state
-  function resetActiveSquares () {
-    if (game.piece.moves.length) {
-      game.piece.moves.forEach(move => {
-        move.classList.remove('moves');
-      });
-    }
-    if ( game.piece.square instanceof Node ) {
-      game.piece.square.classList.remove('active');
-    }
+  this.getFile = i => String.fromCharCode(i+97);
 
-    game.piece.type = '';
-    game.piece.square = {}
-    game.piece.moves = [];
+  this.letterToIndex = l => l.charCodeAt(0) - 97;
+
+  // Aid for testing/dev
+  this.printFileLabels = () => {
+    let labels = 'a|b|c|d|e|f|g|h';
+    return this.player === 'white'
+      ? `\n        ${labels}\n`
+      : `\n        ${labels.reverse()}\n`;
   }
 
-  function movePiece (newSquare) {
-    const piece = game.piece.square.firstElementChild;
-    newSquare.appendChild(piece);
-    resetActiveSquares();
-    game.piece.active = 'false';
-    game.turn = (game.turn + 1) % 2;
-  }
+  this.printRankNumber = r => `     ${r}  `;
 
-  // Activate or deactivate a square
-  function selectSquare (e) {
 
-    if (e.target.classList.contains('moves')) {
-      movePiece(e.target);
-    } else if ( !e.target.classList.contains('piece')
-      || (game.turn === 0 && !e.target.classList.contains('l'))
-      || (game.turn === 1 && !e.target.classList.contains('d'))) {
-      // case 4, click on enemy piece or empty board
-      resetActiveSquares();
-      game.piece.active = 'false';
-    } else {
+  this.stringifyRank = rank => rank.reduce((a,c) => a + ' ' + c);
 
-      const square = e.target.parentNode;
+  this.sayTurn = turn =>
+    turn === 'w'
+      ? '\nTHE TURN IS: white\n'
+      : '\nTHE TURN IS: BLACK\n';
 
-      if (!game.piece.active) {
-        // case 1, !active: make this sq active
-        game.piece.active = 'true';
-        square.classList.add('active');
-        game.piece.square = square;
-        showMoves();
-      } else if (square != game.piece.square) {
-        // case 2, active and something else is active: stay active, change values
-        resetActiveSquares();
-        square.classList.add('active');
-        game.piece.square = square;
-        showMoves();
+  this.printBoard = () => {
+    // Determine orientation of board
+    const white = this.player === 'white';
+    let r = white ? 9 : 0;
+    const dir = white ? -1 : 1;
+
+    // Print board and labels
+    for (;; r += dir) {
+      if (r < 0 || r > 9) break;
+      if (r === 0 || r === 9) {
+        const labels = this.printFileLabels();
+        console.log(labels);
       } else {
-        // case 3, active and this is active: deactivate and clear
-        resetActiveSquares();
-        game.piece.active = 'false';
+        let rank = this.printRankNumber(r);
+        rank += this.stringifyRank(game.board[r]);
+        console.log(rank);
+
       }
     }
-
-    console.log(game.turn, game.piece);
   }
 
-  function showMoves () {
-    game.piece.type = game.piece.square.firstElementChild.classList[1];
+  /*
+    ^ utility functions ^
+      -----
+    TURN LOGIC
+  */
 
-    const sq = game.piece.square.id.split('');
-
-    if (game.piece.type === 'p') {
-      const moves = [sq[0] + (Number(sq[1]) + 1)];
-      if (sq[1] == 2) moves.push(sq[0] + (Number(sq[1]) + 2));
-
-      game.piece.moves = moves.map(move =>
-        document.getElementById(`${move}`)
-      );
-      game.piece.moves.forEach(move => {
-        move.classList.add('moves');
-      });
+  this.turn = async () => {
+    while (game.inPlay) {
+      let move = await this.awaitMove("WHAT'S YOUR MOVE?\n(e.g. \"e2 e4\")\n");
+      move = this.parseMove(move.toLowerCase());
+      console.log(move);
+      // move = this.checkMove(move);
+        //
+      this.movePiece(move);
+      this.printBoard();
     }
   }
 
+  this.awaitMove = query => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
 
+    return new Promise(resolve => {
+      rl.question(query, ans => {
+        rl.close();
+        resolve(ans);
+      });
+    });
+  }
 
-  document.querySelector('.board').addEventListener('click', selectSquare);
+  this.parseMove = string =>
+    string.split('')
+      .reverse()
+      .map(char => {
+        if (char === ' ') return '';
+        else if (isNaN(char)) return this.letterToIndex(char);
+        else return char;
+      })
+      .join('');
+
+  this.movePiece = mv => {
+    // move format: 4 num, xN|yN|xS|yS
+      // e.g. "5746" -> game.board[5][7] = game.board[4][6]
+    game.board[mv[0]][mv[1]] = game.board[mv[2]][mv[3]];
+    game.board[mv[2]][mv[3]] = '-';
+  }
+
+  /*
+    ^ turn logic ^
+      -----
+    GAMEPIECE LOGIC
+  */
+
+  this.pawn = {};
+
 }
 
-chess();
+const game = new Game();
+game.begin();
 
-
-  // // resetActiveSquares();
-  // if (!game.piece.active) {
-  //   selectSquare(e.target.parentNode);
-  //   showMoves();
-  // }
-
-
-
-
-      // // If clicked square is new, deactivate previous square
-      //   // NOTE: clean up?
-      // // if (game.piece.square instanceof Node
-      // //   && game.piece.square != square ) {
-      // //     resetActiveSquares();
-      // //   }
-      //
-      // game.piece.square = square;
-      // if (square.classList.contains('active')) {
-      //   square.classList.remove('active');
-      //   game.piece.active = 'false';
-      // } else {
-      //   square.classList.add('active');
-      //   game.piece.active = 'true';
-      // }
+module.exports.Game = Game;

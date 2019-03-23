@@ -27,19 +27,6 @@ body {
   .square:focus {
     outline: none; }
 
-  .square.active {
-    outline: none;
-    background: rgba(0, 191, 255, 0.2) !important; }
-
-  .square.moves {
-    outline: none;
-    background: rgba(0, 191, 255, 0.2) !important; }
-
-  .square.moves.light {
-    border: 22px darkkhaki solid; }
-
-  .square.moves.dark {
-    border: 22px darkolivegreen solid; }
 
 .piece {
   height: 75px;
@@ -50,3 +37,10 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none; }
+
+.moves {
+  height: 45px;
+  width: 45px;
+
+  background: grey;
+  border-radius: 50%; }
